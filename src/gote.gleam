@@ -4,17 +4,12 @@ import gleam/erlang/process
 import gleam/int
 import gleam/json
 import gleam/list
-import glowvm
 import lustre/attribute
 import lustre/element
 import lustre/element/html
 import wisp
 
-pub fn start() {
-  glowvm.serve(handle_request)
-}
-
-fn handle_request(req: wisp.Request) -> wisp.Response {
+pub fn handle(req: wisp.Request) -> wisp.Response {
   case wisp.path_segments(req) {
     [] -> page(home_page())
     ["status.json"] -> status_json()
@@ -36,7 +31,7 @@ fn home_page() -> element.Element(a) {
     html.p([], [
       html.text(
         "A tiny wisp + lustre app, prerendered on the BEAM and shipped as "
-        <> "a WebAssembly module by glowvm.",
+        <> "a WebAssembly module by afterglow.",
       ),
     ]),
     html.p([], [
