@@ -20,9 +20,6 @@ jobs:
         with:
           otp-version: "28"
           gleam-version: "1.19"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.4
 
       - name: Cache Gleam build
         uses: actions/cache@v4
@@ -32,18 +29,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gleam-build-
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node_modules-
-
       - name: Install dependencies
         run: |
           gleam deps download
-          bun install --frozen-lockfile
 
       - name: Build & Deploy
         run: gleam run -m giolt deploy
