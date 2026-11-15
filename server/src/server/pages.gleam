@@ -54,7 +54,7 @@ pub fn document(
         attribute.name("viewport"),
         attribute.content("width=device-width, initial-scale=1"),
       ]),
-      html.title([], title <> " · gote fullstack"),
+      html.title([], title <> " · gote"),
       html.link([attribute.rel("icon"), attribute.href("/assets/favicon.svg")]),
       html.link([
         attribute.rel("stylesheet"),
@@ -108,7 +108,7 @@ pub fn home(runtime: Runtime) -> String {
     script: NoScript,
     body: page(
       "/",
-      "gote fullstack",
+      "gote",
       [
         "A Lustre app with an Erlang backend, split into three Gleam packages: "
           <> "shared (no target, compiled for both), server (target = \"erlang\") "

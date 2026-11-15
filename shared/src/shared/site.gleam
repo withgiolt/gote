@@ -7,8 +7,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 
 /// Source links point at main, so they work once this example is merged.
-pub const source_base =
-  "https://github.com/withgiolt/gote/blob/main/examples/fullstack/"
+pub const source_base = "https://github.com/withgiolt/gote/blob/main/"
 
 pub type Page {
   Page(path: String, label: String)
@@ -37,7 +36,7 @@ pub fn nav(current: String) -> Element(msg) {
   })
 }
 
-/// A short "Source:" list. Each path is relative to examples/fullstack/.
+/// A short "Source:" list. Each path is relative to the repo root.
 pub fn sources(paths: List(String)) -> Element(msg) {
   html.p([attribute.class("sources")], [
     html.text("Source: "),

@@ -1,5 +1,0 @@
-build/
-node_modules/
-dist/
-/server/priv/static/
-/server/src/server/build_info.gleam

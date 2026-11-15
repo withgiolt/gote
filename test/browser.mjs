@@ -93,7 +93,7 @@ for (const path of ["/", "/ssr", "/prerendered.html"]) {
   const h1 = await text(page, "h1");
   const sources = await page.$$eval(".sources a", (a) => a.map((x) => x.href));
   record(`${path}: renders "${h1}", loads ${scripts} scripts`, scripts === 0 && h1.length > 0);
-  record(`${path}: source links point at main`, sources.length > 0 && sources.every((h) => h.startsWith("https://github.com/withgiolt/gote/blob/main/examples/fullstack/")), `${sources.length} links`);
+  record(`${path}: source links point at main`, sources.length > 0 && sources.every((h) => h.startsWith("https://github.com/withgiolt/gote/blob/main/")), `${sources.length} links`);
   if (path === "/ssr") {
     const rows = await page.$$eval(".squares tbody tr", (r) => r.map((x) => x.textContent));
     record("/ssr: 8 squares from 8 spawned processes", rows.length === 8 && rows[7].startsWith("864"), rows[7]);
