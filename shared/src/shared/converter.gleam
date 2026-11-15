@@ -1,7 +1,4 @@
-//// Island: a temperature converter. It works on floats, and its output has to
-//// be the same string on Erlang (server render) and JavaScript (client), or
-//// hydration would see different text. `format` avoids `float.to_string`,
-//// whose output depends on the target, and rounds to one decimal itself.
+//// The Celsius to Fahrenheit island on /islands.
 
 import gleam/dynamic/decode
 import gleam/float
@@ -13,6 +10,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import shared/island.{type Island, Island}
 import shared/site
 
 pub type Model {
@@ -30,21 +28,25 @@ pub type Props {
   Props(celsius: Float)
 }
 
-pub fn props_to_json(props: Props) -> json.Json {
-  json.object([#("celsius", json.float(props.celsius))])
-}
-
-pub fn props_decoder() -> decode.Decoder(Props) {
-  // A whole number like 20.0 arrives in the browser as the JS number 20, so
-  // accept ints as well as floats.
-  use celsius <- decode.field(
-    "celsius",
-    decode.one_of(decode.float, [decode.int |> decode.map(int.to_float)]),
+pub fn island() -> Island(Props, Msg) {
+  Island(
+    name: "converter",
+    encode: fn(props: Props) {
+      json.object([#("celsius", json.float(props.celsius))])
+    },
+    decoder: {
+      // JavaScript reads 20.0 back as the number 20, so accept ints too.
+      use celsius <- decode.field(
+        "celsius",
+        decode.one_of(decode.float, [decode.int |> decode.map(int.to_float)]),
+      )
+      decode.success(Props(celsius:))
+    },
+    view: fn(props) { view(initial(props)) },
   )
-  decode.success(Props(celsius:))
 }
 
-pub fn initial(props: Props) -> Model {
+fn initial(props: Props) -> Model {
   Model(celsius: props.celsius, raw: format(props.celsius), hydrated: False)
 }
 
@@ -85,7 +87,8 @@ pub fn to_fahrenheit(celsius: Float) -> Float {
   celsius *. 9.0 /. 5.0 +. 32.0
 }
 
-/// One decimal, the same on both targets: 70.7, -3.5, 20.0.
+/// One decimal: 70.7, -3.5, 20.0. `float.to_string` prints differently on
+/// Erlang and JavaScript, and the server's text has to match the browser's.
 pub fn format(value: Float) -> String {
   let tenths = float.round(value *. 10.0)
   let sign = case tenths < 0 {

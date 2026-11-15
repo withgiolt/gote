@@ -1,7 +1,6 @@
-//// The full-page app. The server renders `view(initial(state))` inside
-//// `<div id="app">` and embeds the state as JSON. The client decodes the same
-//// JSON with the same decoder and starts this app on #app, so everything on
-//// the page, nav included, is owned by Lustre after hydration.
+//// The todo list on /app: a whole page, nav included, that the server renders
+//// and the client takes over. `render` is the server's half and the client
+//// starts `app()` on `#app` with the state it reads from `#app-state`.
 
 import gleam/dynamic/decode
 import gleam/int
@@ -15,6 +14,12 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import shared/site
+
+/// The element the app runs in.
+pub const root_id = "app"
+
+/// The `<script type="application/json">` holding the initial state.
+pub const state_id = "app-state"
 
 pub type Todo {
   Todo(id: Int, title: String, done: Bool)
@@ -66,7 +71,34 @@ pub fn state_decoder() -> decode.Decoder(State) {
   decode.success(State(todos:, next_id:))
 }
 
-pub fn initial(state: State) -> Model {
+/// The server's half: the state as JSON and the app's first view.
+pub fn render(state: State) -> List(Element(msg)) {
+  [
+    html.script(
+      [attribute.id(state_id), attribute.type_("application/json")],
+      script_json(state_to_json(state)),
+    ),
+    // Inserted as a string so the HTML matches the client's first render
+    // exactly; element.map would add a `<!-- lustre:map -->` comment.
+    element.unsafe_raw_html(
+      "",
+      "div",
+      [attribute.id(root_id)],
+      element.to_string(view(initial(state))),
+    ),
+  ]
+}
+
+/// JSON that can't end the `<script>` it sits in: `<` becomes `\u003c`, so
+/// `</script>` and `<!--` never appear. U+2028/2029 are escaped as well.
+fn script_json(value: json.Json) -> String {
+  json.to_string(value)
+  |> string.replace("<", "\\u003c")
+  |> string.replace("\u{2028}", "\\u2028")
+  |> string.replace("\u{2029}", "\\u2029")
+}
+
+fn initial(state: State) -> Model {
   Model(todos: state.todos, next_id: state.next_id, draft: "", hydrated: False)
 }
 
@@ -121,20 +153,18 @@ pub fn view(model: Model) -> Element(Msg) {
   let left = list.count(model.todos, fn(item) { !item.done })
   html.div([attribute.class("page")], [
     site.nav("/app"),
-    html.h1([], [html.text("Hydrated full-page app")]),
+    html.h1([], [html.text("Hydrated app")]),
     html.p([], [
       html.text(
-        "The Erlang server rendered this whole page, nav included, and put the "
-        <> "app's state in a <script type=\"application/json\"> tag. The browser "
-        <> "bundle reads that state with the same decoder and starts the same "
-        <> "Lustre app on the existing HTML. Lustre adopts the server's DOM "
-        <> "nodes instead of rebuilding them, and from then on it owns the page.",
+        "The server rendered this page and put the todos in a JSON script tag. "
+        <> "In the browser, Lustre reads them back and takes over the HTML that "
+        <> "is already here, nav included.",
       ),
     ]),
     html.p([], [
       html.text(
-        "The todos live in the browser only. One of them contains </script> to "
-        <> "show that the embedded state is escaped.",
+        "Changes stay in the browser. The third todo contains </script>, "
+        <> "which would break the page if the JSON weren't escaped.",
       ),
     ]),
     site.hydration_badge(model.hydrated),
@@ -175,7 +205,7 @@ pub fn view(model: Model) -> Element(Msg) {
     ]),
     site.sources([
       "shared/src/shared/todos.gleam",
-      "server/src/server/pages.gleam",
+      "server/src/server/page/app.gleam",
       "client/src/client.gleam",
     ]),
   ])

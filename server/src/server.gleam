@@ -1,15 +1,13 @@
-//// Two entry points, one router.
+//// Two ways to run the same router:
 ////
-//// - `handle` is what `giolt build` / `giolt dev` compile with afterglow.
-//// - `main` runs on the BEAM with `gleam run`: mist, the server component's
-////   WebSocket, and the static files giolt would otherwise serve.
+//// - `handle` is the entry giolt compiles to WebAssembly for afterglow.
+//// - `main` starts mist on the BEAM (`just serve`). It also serves the static
+////   files and the server component's WebSocket.
 
 import gleam/erlang/process
 import gleam/http/request
-import gleam/io
-import gleam/string
 import mist
-import server/live
+import server/component/clock
 import server/router
 import server/runtime
 import wisp
@@ -20,16 +18,22 @@ pub fn handle(req: wisp.Request) -> wisp.Response {
 }
 
 pub fn main() -> Nil {
-  check_build()
   wisp.configure_logger()
   let assert Ok(priv) = wisp.priv_directory("server")
   let static_dir = priv <> "/static"
+  // Lustre ships the server component's browser runtime in its priv/static.
+  let assert Ok(lustre_priv) = wisp.priv_directory("lustre")
   let secret = wisp.random_string(64)
   let wisp_handler =
     wisp_mist.handler(
       fn(req) {
         use <- wisp.log_request(req)
         use <- wisp.serve_static(req, under: "/", from: static_dir)
+        use <- wisp.serve_static(
+          req,
+          under: "/lustre",
+          from: lustre_priv <> "/static",
+        )
         router.route(req, runtime.Beam)
       },
       secret,
@@ -38,7 +42,7 @@ pub fn main() -> Nil {
   let assert Ok(_) =
     fn(req) {
       case request.path_segments(req) {
-        ["live", "ws"] -> live.serve(req)
+        ["live", "ws"] -> clock.serve(req)
         _ -> wisp_handler(req)
       }
     }
@@ -48,25 +52,3 @@ pub fn main() -> Nil {
     |> mist.start
   process.sleep_forever()
 }
-
-/// Refuse to start with a client bundle or prerendered page older than the
-/// sources: the browser would hydrate fresh server HTML with stale code.
-fn check_build() -> Nil {
-  let output = shell("node ../scripts/build.mjs check 2>&1; echo \"exit=$?\"")
-  case string.contains(output, "exit=0") {
-    True -> Nil
-    False -> {
-      io.println_error(output)
-      io.println_error(
-        "Run `node ../scripts/build.mjs` (or ../scripts/dev.sh) first.",
-      )
-      halt(1)
-    }
-  }
-}
-
-@external(erlang, "server_ffi", "shell")
-fn shell(command: String) -> String
-
-@external(erlang, "erlang", "halt")
-fn halt(status: Int) -> Nil

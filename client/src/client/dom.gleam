@@ -1,20 +1,12 @@
-//// The few DOM reads the entry needs.
+//// The few DOM lookups the client needs.
 
-pub type Island {
-  Island(id: String, name: String, props: String)
-}
+/// `#(id, props)` of every element with `data-island={name}`.
+@external(javascript, "./dom_ffi.mjs", "islands_named")
+pub fn islands_named(name: String) -> List(#(String, String))
 
-@external(javascript, "./dom_ffi.mjs", "islands")
-pub fn islands() -> List(Island)
-
+/// The text inside the element with this id.
 @external(javascript, "./dom_ffi.mjs", "text_of")
 pub fn text_of(id: String) -> Result(String, Nil)
-
-@external(javascript, "./dom_ffi.mjs", "page_build_id")
-pub fn page_build_id() -> String
-
-@external(javascript, "./dom_ffi.mjs", "bundle_build_id")
-pub fn bundle_build_id() -> String
 
 @external(javascript, "./dom_ffi.mjs", "console_error")
 pub fn console_error(message: String) -> Nil

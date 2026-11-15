@@ -1,6 +1,6 @@
-//// The server component on /live, and the mist WebSocket that carries it.
-//// BEAM only: afterglow has no WebSockets, and its processes end with the
-//// request, so `server.handle` never reaches this module.
+//// The server component on /live: a clock and a counter whose state lives in
+//// an Erlang process on the server, plus the WebSocket that connects it to
+//// the browser. Only `server.main` (the BEAM) uses this module.
 
 import gleam/erlang/process.{type Subject}
 import gleam/http/request.{type Request}

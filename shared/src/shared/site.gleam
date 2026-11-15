@@ -1,12 +1,11 @@
-//// Navigation and "view the source" links, used by every page. The full-page
-//// app renders the nav inside its hydrated root, so this lives in shared.
+//// Bits every page uses: the nav, the source links and the hydration badge.
+//// They live in shared because the todo app renders the nav in the browser too.
 
 import gleam/list
 import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 
-/// Source links point at main, so they work once this example is merged.
 pub const source_base = "https://github.com/withgiolt/gote/blob/main/"
 
 pub type Page {

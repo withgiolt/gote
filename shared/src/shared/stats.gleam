@@ -1,9 +1,6 @@
-//// Island for the data page: runtime numbers from the Erlang server. The
-//// server renders the numbers it just computed and passes the same numbers as
-//// props, and "Refresh" fetches /api/stats.json from the browser.
-////
-//// Fetching is a browser effect, so the client passes it in (`fetch`), and
-//// this module stays target-neutral.
+//// Runtime numbers from the server: the type, its JSON, and the island on
+//// /data that shows them. The client passes in `fetch`, so this module
+//// doesn't depend on a browser HTTP library.
 
 import gleam/dynamic/decode
 import gleam/int
@@ -14,6 +11,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import shared/island.{type Island, Island}
 import shared/site
 
 pub type Stats {
@@ -71,7 +69,13 @@ pub type Msg {
   Fetched(Result(Stats, String))
 }
 
-pub fn initial(stats: Stats) -> Model {
+pub fn island() -> Island(Stats, Msg) {
+  Island(name: "stats", encode: to_json, decoder: decoder(), view: fn(stats) {
+    view(initial(stats))
+  })
+}
+
+fn initial(stats: Stats) -> Model {
   Model(stats:, fetches: 0, loading: False, error: "", hydrated: False)
 }
 

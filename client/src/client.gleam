@@ -1,18 +1,9 @@
-//// Browser entry. It hydrates whatever the server put on the page:
-////
-//// - `<div id="app">` with `<script id="app-state">`: the full-page app.
-//// - every `[data-island]` element: one island each, with its props in
-////   `data-props`.
-////
-//// The server stamps the id of the build that produced it on <html>. If this
-//// bundle came from another build, its view code may differ from the server's,
-//// and hydrating would silently swap fresh server HTML for stale output, so
-//// it refuses and says so in the console instead.
+//// The browser bundle. Each page loads the same file, and only the parts the
+//// server put on that page start.
 
 import client/dom
-import gleam/dynamic/decode
+import client/island
 import gleam/json
-import gleam/list
 import lustre
 import rsvp
 import shared/converter
@@ -21,78 +12,33 @@ import shared/stats
 import shared/todos
 
 pub fn main() -> Nil {
-  case dom.page_build_id() == dom.bundle_build_id() {
-    False ->
-      dom.console_error(
-        "gote: not hydrating. The page was rendered by build "
-        <> dom.page_build_id()
-        <> " but this bundle is build "
-        <> dom.bundle_build_id()
-        <> ". Rebuild with `node scripts/build.mjs`.",
-      )
-    True -> {
-      hydrate_app()
-      list.each(dom.islands(), hydrate_island)
-    }
-  }
+  start_todos()
+  island.hydrate(counter.island(), counter.app())
+  island.hydrate(converter.island(), converter.app())
+  island.hydrate(stats.island(), stats.app(fetch_stats))
 }
 
-fn hydrate_app() -> Nil {
-  case dom.text_of("app-state") {
+/// /app: the whole page is a Lustre app, with its state in `#app-state`.
+fn start_todos() -> Nil {
+  case dom.text_of(todos.state_id) {
     Error(Nil) -> Nil
     Ok(text) ->
       case json.parse(text, todos.state_decoder()) {
-        Ok(state) -> started(lustre.start(todos.app(), "#app", state), "app")
-        Error(_) -> dom.console_error("gote: #app-state did not decode")
+        Error(_) -> dom.console_error("Could not read the todos state")
+        Ok(state) ->
+          case lustre.start(todos.app(), "#" <> todos.root_id, state) {
+            Ok(_) -> Nil
+            Error(_) -> dom.console_error("Could not start the todo app")
+          }
       }
   }
 }
 
-fn hydrate_island(island: dom.Island) -> Nil {
-  let selector = "#" <> island.id
-  case island.name {
-    "counter" ->
-      with_props(island, counter.props_decoder(), fn(props) {
-        started(lustre.start(counter.app(), selector, props), island.id)
-      })
-    "converter" ->
-      with_props(island, converter.props_decoder(), fn(props) {
-        started(lustre.start(converter.app(), selector, props), island.id)
-      })
-    "stats" ->
-      with_props(island, stats.decoder(), fn(props) {
-        started(
-          lustre.start(stats.app(fetch_stats), selector, props),
-          island.id,
-        )
-      })
-    other -> dom.console_error("gote: unknown island " <> other)
-  }
-}
-
-fn with_props(
-  island: dom.Island,
-  decoder: decode.Decoder(props),
-  start: fn(props) -> Nil,
-) -> Nil {
-  case json.parse(island.props, decoder) {
-    Ok(props) -> start(props)
-    Error(_) -> dom.console_error("gote: bad props for #" <> island.id)
-  }
-}
-
-fn started(result: Result(a, lustre.Error), what: String) -> Nil {
-  case result {
-    Ok(_) -> Nil
-    Error(_) -> dom.console_error("gote: could not start " <> what)
-  }
-}
-
 fn fetch_stats() {
-  rsvp.get("/api/stats.json", rsvp.expect_json(stats.decoder(), to_fetched))
+  rsvp.get("/api/stats.json", rsvp.expect_json(stats.decoder(), stats_fetched))
 }
 
-fn to_fetched(result: Result(stats.Stats, rsvp.Error(e))) -> stats.Msg {
+fn stats_fetched(result: Result(stats.Stats, rsvp.Error(e))) -> stats.Msg {
   case result {
     Ok(value) -> stats.Fetched(Ok(value))
     Error(_) -> stats.Fetched(Error("Could not load /api/stats.json"))

@@ -1,6 +1,4 @@
-//// Island: a counter. The server renders `view(init(start))` into the page,
-//// and the client starts the same app on that element, so Lustre adopts the
-//// existing DOM instead of re-rendering it.
+//// The counter island on /islands.
 
 import gleam/dynamic/decode
 import gleam/int
@@ -11,6 +9,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import shared/island.{type Island, Island}
 import shared/site
 
 pub type Model {
@@ -27,17 +26,21 @@ pub type Props {
   Props(start: Int)
 }
 
-pub fn props_to_json(props: Props) -> json.Json {
-  json.object([#("start", json.int(props.start))])
+pub fn island() -> Island(Props, Msg) {
+  Island(
+    name: "counter",
+    encode: fn(props: Props) {
+      json.object([#("start", json.int(props.start))])
+    },
+    decoder: {
+      use start <- decode.field("start", decode.int)
+      decode.success(Props(start:))
+    },
+    view: fn(props) { view(initial(props)) },
+  )
 }
 
-pub fn props_decoder() -> decode.Decoder(Props) {
-  use start <- decode.field("start", decode.int)
-  decode.success(Props(start:))
-}
-
-/// What the server renders. `hydrated` is always False here.
-pub fn initial(props: Props) -> Model {
+fn initial(props: Props) -> Model {
   Model(count: props.start, hydrated: False)
 }
 

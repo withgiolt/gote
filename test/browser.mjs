@@ -1,6 +1,6 @@
 // Headless Chrome check of every page.
-//   BASE=http://127.0.0.1:8000 RUNTIME=beam node test/browser.mjs
-//   BASE=http://127.0.0.1:3000 RUNTIME=afterglow node test/browser.mjs
+//   just test              BASE=http://127.0.0.1:8000 RUNTIME=beam
+//   just test afterglow    BASE=http://localhost:3000 RUNTIME=afterglow
 // CHROME points at the browser (default /usr/bin/google-chrome).
 //
 // Hydration: the bundle request is held back, every server-rendered node in
@@ -27,13 +27,13 @@ async function open(path, { holdBundle = false } = {}) {
   const problems = [];
   page.on("console", (m) => { if (m.type() === "error" || m.type() === "warn") problems.push(`${m.type()}: ${m.text()}`); });
   page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
-  page.on("requestfailed", (r) => { if (!r.url().includes("/assets/client.") || !holdBundle) problems.push(`failed: ${r.url()}`); });
+  page.on("requestfailed", (r) => { if (!r.url().includes("/assets/client.js") || !holdBundle) problems.push(`failed: ${r.url()}`); });
   page.on("response", (r) => { if (r.status() >= 400) problems.push(`${r.status()}: ${r.url()}`); });
   let release = null;
   if (holdBundle) {
     await page.setRequestInterception(true);
     const held = [];
-    page.on("request", (r) => (r.url().includes("/assets/client.") && !release ? held.push(r) : r.continue()));
+    page.on("request", (r) => (r.url().includes("/assets/client.js") && !release ? held.push(r) : r.continue()));
     release = async () => { for (const r of held) await r.continue(); };
   }
   await page.goto(BASE + path, { waitUntil: holdBundle ? "domcontentloaded" : "load" });
@@ -199,29 +199,6 @@ for (const path of ["/", "/ssr", "/prerendered.html"]) {
     record("/live/ws on afterglow answers 501", ws === 501, String(ws));
   }
   if (RUNTIME === "beam") noProblems("/live", problems);
-  await page.close();
-}
-
-// A page from another build: the bundle must refuse to hydrate it.
-{
-  const page = await browser.newPage();
-  const errors = [];
-  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
-  await page.setRequestInterception(true);
-  page.on("request", async (r) => {
-    if (new URL(r.url()).pathname !== "/islands") return r.continue();
-    const res = await fetch(r.url());
-    const body = (await res.text()).replace(/data-build="[^"]+"/, 'data-build="000000000000"');
-    r.respond({ status: 200, contentType: "text/html; charset=utf-8", body });
-  });
-  await page.goto(BASE + "/islands", { waitUntil: "load" });
-  await new Promise((r) => setTimeout(r, 800));
-  const hydrated = await page.evaluate(() => document.querySelectorAll('[data-hydrated="yes"]').length);
-  record(
-    "mismatched build id: bundle refuses to hydrate and says why",
-    hydrated === 0 && errors.some((e) => e.includes("not hydrating")),
-    errors.find((e) => e.includes("not hydrating")) ?? errors.join(" | "),
-  );
   await page.close();
 }
 

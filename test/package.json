@@ -1,0 +1,8 @@
+{
+  "name": "gote-browser-test",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "puppeteer-core": "24.31.0"
+  }
+}

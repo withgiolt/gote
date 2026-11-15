@@ -19,8 +19,9 @@ giolt = ">= 0.8.0 and < 1.0.0"
 
 [tools.giolt]
 project = 19
-# Builds the client bundle, copies the static files and prerenders
-# prerendered.html into priv/static before every `giolt build` and `giolt dev`.
-prebuild = "node ../scripts/build.mjs"
+# Before every `giolt build` and `giolt dev`: Lustre's build tool bundles the
+# client and copies client/assets into priv/static/assets, then
+# server/prerender writes priv/static/prerendered.html.
+prebuild = "cd ../client && gleam run -m lustre/dev build && cd ../server && gleam run -m server/prerender"
 assets = "priv/static"
-watch = ["src", "../shared/src", "../client/src", "assets"]
+watch = ["src", "../shared/src", "../client/src", "../client/assets"]
