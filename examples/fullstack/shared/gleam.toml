@@ -1,0 +1,9 @@
+name = "shared"
+version = "1.0.0"
+# No `target`: this package is compiled by the server for Erlang and by the
+# client for JavaScript, so it may only use target-neutral code.
+
+[dependencies]
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+lustre = ">= 5.7.1 and < 6.0.0"

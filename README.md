@@ -16,3 +16,9 @@ gleam run -m giolt dev
 ```sh
 gleam run -m giolt build
 ```
+
+## Examples
+
+- [`examples/fullstack`](examples/fullstack): a multi-page Lustre site with an
+  Erlang backend, hydration, client islands and a server component, split into
+  shared, server and client packages. It runs on the BEAM and on afterglow.
